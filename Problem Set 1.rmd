@@ -1,0 +1,92 @@
+---
+title: "Problem Set 1"
+author: "Seungho Choi"
+date: "2025-09-13"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(tibble)
+library(tidyverse)
+```
+
+
+## 3. Starting in R
+
+a) generate some simulated data
+
+```{r}
+X = rnorm(n = 1000, mean = 0, sd = 1)
+X[1]
+```
+
+
+b) Calculate the following sample moments of the data you have generated:
+  
+```{r}
+mean(X)
+sd(X)
+sd(X)
+```
+
+
+c) Construct the running mean of the random variables:
+  
+```{r}
+running_mean <- cumsum(X) / seq_along(X)
+library(purrr)
+library(ggplot2)
+data <- tibble(running_mean) %>%
+  rowid_to_column()
+ggplot(data, aes(x=rowid, y=running_mean)) +
+  geom_point() + 
+  geom_line(aes(y=0))
+```
+
+
+d) Repeat the exercise for σ = 2 and σ = .2
+
+```{r}
+X = rnorm(n = 1000, mean = 0, sd = 2)
+X[1]
+
+mean(X)
+sd(X)
+sd(X)
+
+running_mean <- cumsum(X) / seq_along(X)
+library(purrr)
+library(ggplot2)
+data <- tibble(running_mean) %>%
+  rowid_to_column()
+ggplot(data, aes(x=rowid, y=running_mean)) +
+  geom_point() + 
+  geom_line(aes(y=0))
+```
+```{r}
+X = rnorm(n = 1000, mean = 0, sd = 0.2)
+X[1]
+
+mean(X)
+sd(X)
+sd(X)
+
+running_mean <- cumsum(X) / seq_along(X)
+library(purrr)
+library(ggplot2)
+data <- tibble(running_mean) %>%
+  rowid_to_column()
+ggplot(data, aes(x=rowid, y=running_mean)) +
+  geom_point() + 
+  geom_line(aes(y=0))
+```
+
+
+Does the sample mean seem to converge faster, slower, or independently of the variance?
+  
+The sample mean seems to converge faster when it has a lower variance.
+
+To explain this in more detail, the consequence of plotting different values for the standard deviation is clearly shown by the graph. When I changed the value to 2, instead of 1, not only did the range of the y-axis (running_mean) expand, but also, unlike the original graph, where the fluctuation of the line becomes steadied as it gets closer to the end, this new graph showed a nonstop fluctuation. On the other hand, in the case where I put 0.2 instead of 1, although the initial starting point is still fluctuating, shortly after the first part, I was able to see that the variance of the entire graph is a lot steadier than the two graphs that I have created previously.
