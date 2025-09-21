@@ -1,0 +1,181 @@
+---
+title: "ECON266_Problem Set 2_Seungho Choi"
+author: "Seungho Choi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r message=FALSE}
+library(tidyverse)
+```
+```{r message=FALSE}
+# load the proper package
+library (data.table)
+# load the dataset -- this command is new
+data = data.frame(read.csv(file="bertrand2004.csv", header = TRUE, sep = ","))
+```
+
+#
+#
+
+### 1. To get the exercise started, let’s map an economic question into data. Define the following variables:
+
+| Symbol | Name in R | Description |
+|--------|-----------|-------------|
+| Ci | call | Whether an applicant got a call back |
+| Wi | race | Whether the applicant is white or not |
+| Mi | sex | Whether the applicant is a male |
+| Expi | yearsexp | Years of experience of the applicant |
+| Educi | education | Education level of the applicant |
+
+
+#### (a) What is the interpretation of C_bar in this situation?
+Hint: this is a 0/1 variable like a coin flip, so what is the mean of a Bernoulli?
+
+C_bar in general is a sample mean of the variable C. In this specific case, with the given information, as the variable C indicates whether an applicant got a call back or not, it is a dichotomous variable. In other words, it is a variable that has only two possible values, just like the Bernoulli.
+
+##### Therefore, since C_bar is a sample mean of the dichotomous variable, the interpretation of it will be the proportion of all applicants who received a callback.
+
+#
+
+#### (b) What about M_bar? Hint: the same as the previous hint.
+
+M_bar is also a dichotomous variable, but in this case the possible outcomes will be either male or not.
+
+##### Therefore, the interpretation of M_bar will be the proportion of all applicants who were male.
+
+#
+#
+
+### 2.Calculate the mean years of experience and education by sex.
+
+```{r}
+data %>%
+  group_by(sex) %>%
+  summarise(
+    across(
+      c(yearsexp, education),
+      c(mean = ~ mean(.x)))
+  )
+```
+
+- mean years of experience: 7.964218 (female) / 7.579042 (male)
+- mean years of education: 3.611784 (female) / 3.791328 (male)
+
+#
+#
+
+### 3. Calculate the standard errors and do a t-test (by hand or using the test commands) for whether years of experience or education are diﬀerent by sex.
+
+#
+
+#### - Manual Calculation
+```{r}
+mydata <- data %>%
+  group_by(sex) %>%
+  reframe(
+    count = n(),
+    across(
+      c(yearsexp, education),
+      list(
+        mean = ~mean(.x),
+        sd = ~sd(.x),
+        se = ~sd(.x) / sqrt(n())
+        )
+      )
+    )
+select(mydata, yearsexp_se, education_se)
+```
+
+```{r}
+# Manual t-test for years of experience 
+manaual_t_tstat_yearsexp <- 
+  (mydata$yearsexp_mean[1] - mydata$yearsexp_mean[2]) /
+  sqrt(
+    mydata$yearsexp_se[1]^2 + mydata$yearsexp_se[2]^2
+  )
+manaual_t_tstat_yearsexp
+```
+
+```{r}
+# Manual t-test for years of education
+manaual_t_tstat_education <- 
+  (mydata$education_mean[1] - mydata$education_mean[2]) /
+  sqrt(
+    mydata$education_se[1]^2 + mydata$education_se[2]^2
+  )
+manaual_t_tstat_education
+```
+
+#
+
+#### - Using test commands
+```{r}
+t.test(
+  filter(data, sex == "f")["yearsexp"],
+  filter(data, sex == "m")["yearsexp"]
+)
+
+t.test(
+  filter(data, sex == "f")["education"],
+  filter(data, sex == "m")["education"]
+)
+```
+
+##### Both manual calculation and using the test command are showing the same t-test results.
+
+- Manual: 2.178841 (Experience), -8.257774 (Education)
+- Command: 2.1788 (Experience), -8.2578 (Education)
+
+#
+
+##### In case of years of experience, the results of the t-test shows a statistically significant difference between male and female applicants.
+
+- p-value: 0.02948 < 0.05 -> reject the null hypothesis
+- confidence interval: [0.03845428, 0.73189772] -> entire interval is positive -> does not contain zero
+
+#
+
+##### In case of years of education, the results of the t-test shows a highly statistically significant difference between male and female applicants.
+
+- p-value: 2.888e-16 < 0.05 -> reject the null hypothesis
+- confidence interval: [-0.2221881, -0.1369004] -> entire interval is negative -> does not contain zero
+
+#
+#
+
+### 4. Now, using the same commands (or any other commands you prefer), calculate the diﬀerence in call back rates by sex.
+
+```{r}
+data %>%
+  group_by(sex) %>%
+  summarise(mean = mean(call)) %>%
+  ggplot(aes(x=sex, y=mean, fill=sex)) +
+  geom_col() +
+  labs(x="Sex", y="Probability of callback", title = "Probabiltiy of callback by sex") +
+  theme_bw()
+
+data %>%
+  group_by(sex) %>%
+  summarise(
+    across(
+      c(call),
+      c(mean = ~ mean(.x)))
+  )
+```
+- As shown from both the graph and the command, the probability of callback is higher in case of female (0.08259349) than male (0.07407407).
+
+#
+#
+
+### 5. Perform a t-test to see if these diﬀerences are statistically significant. You may do this by hand, with the t.test command, or with any other command.
+
+```{r}
+t.test(
+  filter(data, sex == "f")["call"],
+  filter(data, sex == "m")["call"]
+)
+```
+##### The results of the t-test indicate that there is no statistically significant difference in the callback rates between male and female applicants.
+
+- p-value: 0.3481 > 0.05 -> Fail to reject the null hypothesis
+- confidence interval: [-0.009283908, 0.026322738] -> includes zero
