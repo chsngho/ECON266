@@ -1,0 +1,116 @@
+---
+title: "ECON266_Problem Set 3_Seungho Choi"
+author: "Seungho Choi"
+date: "2025-09-29"
+output: html_document
+---
+
+#
+#
+
+### 1. First, load the dataset just as before. For this exercise, you will also need the ggplot2 library loaded.
+
+```{r message=FALSE}
+library(tidyverse)
+library(ggplot2)
+library (data.table)
+data = data.frame(read.csv(file="stocks.csv", header = TRUE, sep = ","))
+```
+
+#
+#
+
+### 2. Second, let’s plot the data. Using ggplot2 make a scatter plot of the returns of Tesla as the dependent variable and the returns of market as the independent variable. To this, load the ggplot2 package. For the command, here is a rough schema (that you have to fill in yourself):
+
+```{r}
+data %>%
+  ggplot(aes (x =ret_sp500, y =ret_tsla) ) +
+  geom_point ()
+```
+The first part tells R to make a ggplot object, using which dataset, x, and y variables are
+specified. The second part says to create a scatter plot.
+
+#
+#
+
+### 3. Now let’s add a best fit line. To do this we copy and paste the same opening as above with an additional command telling R to add the line:
+
+```{r}
+data %>%
+  ggplot(aes (x =ret_sp500, y =ret_tsla)) +
+  geom_point () +
+  geom_smooth (method = 'lm', se = FALSE)
+```
+
+#
+#
+
+### 4. Now let’s run a regression to calculate the beta of Tesla stock. To do this we need to use the lm command. The schematic as below, where you need to fill in the y, x, and data entries yourself:
+
+```{r}
+lm(ret_tsla ~ ret_sp500, data)
+```
+
+#
+#
+
+### 5. What is the β of Tesla stock? Calculate the β for each of the other three stocks in the data. Fill in a table that looks like the one at the end of the homework.
+
+```{r}
+lm(ret_f ~ ret_sp500, data)
+lm(ret_aapl ~ ret_sp500, data)
+lm(ret_msft ~ ret_sp500, data)
+```
+
+| Stock | β |
+|-------|---|
+| Tesla | 1.334472 |
+| Ford  | 1.0576747 |
+| Apple | 1.1987471 |
+| Microsoft | 1.1883818 |
+
+#
+#
+
+### 6. Optional for those interested: The results from the base lm command are a bit bare. To learn more, we use the summary command. To do this, we need to save our model and then feed it to the summary command:
+
+```{r}
+model_tsla = lm(ret_tsla ~ ret_sp500, data)
+summary(model_tsla)
+
+model_f = lm(ret_f ~ ret_sp500, data)
+summary(model_f)
+
+model_aapl = lm(ret_aapl ~ ret_sp500, data)
+summary(model_aapl)
+
+model_msft = lm(ret_msft ~ ret_sp500, data)
+summary(model_msft)
+```
+
+### Once you’ve run this command, you can report the variance of the error term from your regressions, (σ_U)^2 , by squaring the residual standard error. Run the command for each of the four stocks in our data—add these results to your table containing the β’s. Which stock has the most volatile returns net of its comovement with the S&P 500 (highest (σ_U)^2)?
+
+Tesla: The residual standard error = 0.03354.
+-> (0.03354)^2 = 0.001124932
+
+Ford: The residual standard error = 0.01822.
+-> (0.01822)^2 = 0.0003319684
+
+Apple: The residual standard error = 0.01233.
+-> (0.01233)^2 = 0.0001520289
+
+Microsoft: The residual standard error = 0.009469.
+(0.009469)^2 = 8.966196e-05 (≈ 0.000090)
+
+#
+
+| Stock | β | (σ_U)^2 |
+|-------|---|---------|
+| Tesla | 1.334472 | 0.001124932 |
+| Ford  | 1.0576747 | 0.0003319684 |
+| Apple | 1.1987471 | 0.0001520289 |
+| Microsoft | 1.1883818 | 0.000090 |
+
+#
+
+#### Tesla is the the stock that has the highest squared residual standard error, in other words, Tesla has the most volatile returns net of its comovement with the S&P 500.
