@@ -1,0 +1,248 @@
+---
+title: "ECON266_Problem Set 5_Seungho Choi"
+author: "Seungho Choi"
+date: "2025-11-05"
+output: html_document
+---
+
+#
+#
+
+#### 1. As before we need to map our data into economic variables:
+
+| Symbol | Name in R | Description |
+|--------|-----------|-------------|
+| $GOP_i$ | rep2000 | GOP Vote Share in 2000 |
+| $GOP96_i$ | rep1996 | GOP Vote Share in 1996 |
+| $R_i$ | region | Region of the country |
+| $C_i$ | channels | Number of channels in 2000 |
+| $Inc_i$ | income2000 | Mean income in 2000 |
+| $U_i$ | urban | Fraction of town in urban core in 2000 |
+| $F_i$ | foxnews2000 | Dummy for if Fox News is present in 2000 |
+
+##### We will estimate models of the form:
+##### $GOP_i = β_0 + β_1F_i + Controls + U_i$
+##### and we will vary the controls.
+
+#
+
+#### (a) In any regression, what will be the interpretation of $β_1$?
+
+- The coefficient $β_1$ is the estimated difference in the GOP vote share in 2000 between towns with Fox News ($F_i=1$) and towns without it ($F_i=0$), holding all other control variables in the model constant.
+
+#
+
+#### (b) In a regression with no controls, what will be the interpretation of $β_0$?
+
+- $GOP_i = β_0 + β_1F_i + U_i$
+- $β_0$ is the intercept of the model, which is the baseline or the reference group. This shows the average value of the dependent variable ($GOP_i$) when the dummy variable ($F_i$) is 0.
+- So, in our case of the regression with no controls, the interpretation of $β_0$ is the estimated average GOP vote share in 2000 for towns without Fox News.
+
+#
+#
+
+### Part 1: Regression + t-stats Review
+
+#
+
+#### 2. To get the data part going, load up the dataset foxData.csv into R. Also make sure you have your libraries for doing statistics and plots ready to go. You will need to add $car$ and $lmtest$ to our usual set.
+
+```{r message=FALSE}
+library(tidyverse)
+library(ggplot2)
+library (data.table)
+library(car)
+library(lmtest)
+data = data.table(read.csv(file="foxData.csv", header = TRUE, sep = ","))
+```
+
+#
+
+#### 3. Calculate the average vote share (unweighted) across towns, as well as the fraction of towns with access to Fox News in 2000.
+
+```{r}
+mean(data$rep2000) # average vote share (unweighted) across towns in 2000
+mean(data$foxnews2000) # the fraction of towns with access to Fox News in 2000 (Number of towns with Fox News (1) \ Total number of towns)
+```
+
+#
+
+#### 4. We are interested in sources of omitted variable bias. Can you think of a reason that region will be an important source of omitted variable bias?
+#### As a hint: News Corporation is run out of New York City and firms tend to expand radially from their home base.
+
+- In the United States, where the data is being collected, the political preferences are not evenly distributed across the states, rather, it tends to different based on the region. For example, South tend to have a higher average GOP vote share than regions like Northeast and West.
+- Also, to think about the hint, knowing that the Fox News has a headquarter in New York City, people living in the Northeast region are more likely to have Fox News just because of the fact that they live in a specific region.
+
+- Therefore, because of these reasons, region could the the source of omitted variable bias. Without the "region", the model wouldn't be able to include the fact that Northeastern region, where Fox News is present, is a place where average GOP vote share is lower than other states. Due to this reason, the regression model will show the result that towns with Fox News have lower GOP vote shares, leading to the negative (downward) bias.
+
+#
+
+#### 5. To see if region might be an omitted variable, calculate the share of towns with Fox News in the Northeast in 2000 and compare it other towns. Do a t-test to test if this is statistically significant.
+#### Hint: The region variable includes 4 regions–you will need to combine 3. 
+
+```{r}
+setDT(data) # converting the data.frame to data.table
+data[, neDummy := (region == "Northeast")] # Defining Northeast Dummy
+```
+
+```{r}
+t.test(foxnews2000 ~ neDummy, data = data)
+```
+- Towns in Northeast (mean in group TRUE): 21.7% of towns had Fox News in 2000.
+- Other towns (mean in group FALSE): 17.8% of towns had Fox News in 2000.
+
+- This shows that the Northeast towns' share of towns with Fox News was about 3.9 percentage points higher compared to the others.
+
+- And as the p-value is 2.918e-06 (< 0.05), it is statistically significant.
+
+
+#### What do you think would be the sign of the bias coming from omitting Northeast?
+
+- $sign(OVB) = sign(\beta_Z) × sign(Cov(X,Z)).$
+
+```{r}
+lm(foxnews2000 ~ neDummy, data = data)
+```
+- As the sign of the coefficient of neDummyTRUE is positive, which means that the $sign(Cov(X,Z))$ is positive.
+- On the other hand, since the Northeast region has a tendency of having low GOP vote share, the sign of $\beta_Z$, which is the same as $Cov(Y,Z)$ (in our case, $Cov(rep200, neDummy)$), could be assumed as negative.
+
+- $(-) \times (+) = (-)$
+
+- Therefore the sign of the bias coming from omitting Northeast would be negative.
+
+#
+
+#### 6. Explain why the GOP vote share in 1996 is likely also an important omitted variable. To ground thinking here, notice that voter preferences tend to be correlated over time, and Fox News likely would want to enter markets with viewers who want their product.
+
+- Since it is mentioned that the voter preferences tend to be correlated over time, we can expect GOP vote share in 1996 would have a "positive correlation" with GOP vote share in 2000.
+
+- Also, as the Fox News, which is considered to be a conservative news channel, will target the market with viewers who are conservative. This means that towns with a high Republican vote share in 1996 would have been more likely to be targeted by Fox News, leading the "positive correlation" between the two.
+
+#### What do you think will be the sign of the bias from ignoring this variable?
+
+- $sign(OVB) = sign(\beta_Z) × sign(Cov(X,Z))$
+
+- (Effect of rep1996 on rep2000) * (Correlation of foxnews2000 and rep1996)
+
+- The $sign(\beta_Z)$ is the effect of rep1996 on rep2000 and $sign(Cov(X,Z))$ is the correlation of foxnews2000 and rep1996. As both of them are positive, the sign fo the bias from ignoring rep1996 would also be positive.
+
+- $(+) \times (+) = (+)$
+
+#### ⋆⋆(Optional: Can you think of a t-test to run in R to check this?)
+
+```{r}
+t.test(rep1996 ~ foxnews2000, data = data)
+```
+- mean in group 0 = 0.4673 : Towns without Fox News had an average 46.7% GOP vote share in 1996
+- mean in group 1 = 0.4795 : Towns with Fox News had an average 48% GOP vote share in 1996
+- This shows that the towns with Fox News had a higher average GOP vote share in 1996, confirming that there is a positive correlation between foxnews2000 and rep1996.
+- Also, as the p-value of 0.0002021 (< 0.05) indicates a statistical significance.
+
+
+#
+#
+
+### Part 2: Regressions and Plots
+
+#
+
+#### 7. Run a regression of the GOP vote share in 2000 on whether Fox News is present in 2000. Test the coefficient on Fox News.
+
+```{r}
+library(sandwich)
+
+m1 <- lm(rep2000 ~ foxnews2000, data = data)
+coeftest(m1, vcov = vcovHC(m1, type = "HC3"))
+```
+
+#
+
+#### 8. Let’s begin adding control variables. First, add in the fraction of GOP voters in the town. What happens to the coefficient? Does the coefficient move in the direction you expected given the discussion in part 1?
+
+```{r}
+m2 <- lm(rep2000 ~ foxnews2000 + rep1996, data = data)
+coeftest(m2, vcov = vcovHC(m2, type = "HC3"))
+```
+- After adding in the fraction of GOP voters in the town (rep1996), the coefficient of foxnews2000 got smaller, or in other words, less positive (-0.00025935 -> -0.0117950).
+
+- This shift is happening in a direction that I expected from part 1.
+- From part 1, I have expected the sign of the omitted variable bias from ignoring rep1996 would be positive, which meant that the simple model was overestimating the effect of Fox News, since Fox News was more common in towns that already voted Republican.
+
+- So, by adding rep1996 as a control, I could remove this bias. As a result, the coefficient on foxnews2000 decreased, moving closer to its true effect.
+
+#
+
+#### 9. Now add in the dummies for region. Interpret the coefficient on South. Why isn’t Midwest in the regression?
+
+```{r}
+m3 <- lm(rep2000 ~ foxnews2000 + rep1996 + region, data = data)
+coeftest(m3, vcov = vcovHC(m3, type = "HC3"))
+```
+- On average, towns in the South had an average 2000 GOP vote share that was 1.21 percentage points lower than towns in the Midwest
+
+- Midwest is omitted to avoid the dummy variable trap, which would violate the OLS assumption of no perfect multicollinearity, since Midwest = 1 - Northeast - South - West.
+
+#
+
+#### 10. Now do an F-test on whether the region dummies are significant.
+
+```{r}
+m3 <- lm (rep2000 ~ foxnews2000 + rep1996 + factor(region), data = data)
+
+linearHypothesis(m3, 
+                 c("factor(region)Northeast", 
+                   "factor(region)South", 
+                   "factor(region)West"), 
+                 vcov = vcovHC(m3, type = "HC3"))
+```
+- It is shown that the p-value is < 2.2e-16, which is extremely small. This indicates that we can reject the null hypothesis.
+
+#
+
+#### 11. Now consider the variable channels. This is a variable that tells you how many channels are available in the region. Cable providers may strategically place popular channels up front. It is better to enter big markets early, even at the expense of competing with many channels. Hence, Fox News Entry is positively correlated with number of channels available (you can check this). For the number of channels to be an omitted variable, what else must it be correlated with? Can you think of a reason this may be the case?
+
+- In order for the number of channels to be an omitted variable, it should be correlated with GOP Vote Share in 2000, which is the independent variable.
+
+- The possible reason behind this connection is the fact that urban area tends to have access to larger number of channels due to the better infrastructure and also because of the news companies' profit oriented targeting strategies. Since the urban areas tends to have a stronger preference toward the Democratic party, this will lead to a lower GOP vote share then the rural areas.
+
+#
+
+#### 12. Run the regression including the number of channels as a control. What happens to the coefficient on Fox? Is it statistically significant?
+
+```{r}
+m4 <- lm(rep2000 ~ foxnews2000 + rep1996 + factor(region) + channels, data = data)
+coeftest(m4, vcov = vcovHC(m4, type = "HC3"))
+```
+- From the previous model (m3), the coefficient was 0.1097090, however, the new model (m4) including the number of channels as a control printed the increased output of 3.7069e-03.
+- This confirms that my estimation was correct. As I estimated m3 to be underestimating the coefficient, with the removal of the negative bias, coefficient on foxnews2000 showed an increase.
+
+- As the p-value is shown to be 0.0171, which is less than 0.05, I can reject the null hypothesis at the 5% significance level.
+
+#
+
+#### 13. Finally, consider the relationship between income, cable news, and voting. There are clear differences in voting patterns across the income distribution. Moreover, cable was quite expensive—costing about 360 dollars per year when the median income was 42000 per year. At this time, there was no bundling with internet and a limited choice of channels. Hence, Fox News may choose to enter wealthier markets where people are more likely to have cable (richer customers also demand a higher premium from advertisers). To the first point, plot the relationship between GOP share in 2000 and income in 2000—color code by region.
+
+```{r}
+#ggplot (dataSet, aes(x = xVar, y = yVar, color = as.factor(groupVar))) + geom_point()
+
+
+rep2000_income2000_region <- ggplot(data, aes(x = income2000, y = rep2000, color = factor(region))) +
+  geom_point() +
+  labs(title = "2000 GOP Vote Share vs 2000 Income by Region (with color code)",
+       x = "Mean income in 2000",
+       y = "GOP Vote Share in 2000",
+       color = "Region") +
+  theme_minimal()
+
+print(rep2000_income2000_region)
+```
+
+#
+
+#### 14. You’ve seen the coefficient change dramatically as we entered new and different controls. Given our discussions in class on both external and internal validity, assess this study. This is a subjective question and requires you to think like a social scientist and not a statistician. What are the pros of this research design? What are the drawbacks? Are there omitted factors we’ve missed?
+
+- In terms of the pros of this research design, firstly, the total of 9256 observations provide a reasonably large data size that could be used for the statistical testing. Also, the use of various control variables allowed the model to provide a much more accurate output than the simple form. Lastly, along side the data and statistical proof, the theoretical evidence coming from the real world expectation is increasing the reliability of the research as well.
+
+- The drawbacks of this research starts from the fact that this research is an observational study, not a randomized experiment. Also the data itself is coming from the town-wide level, since it is better to have a more micro level data (ideally the data of the individuals), this could also be pointed out to be a limit of this research. Finally, the effectiveness of the treatment is uncertain. Since the presence of the Fox News channel in a town does not guarantee that people who lives there were watching the channel, ths could also mislead the result.
+
+- The other possible omitted variables are as follows. First, this research is missing demographic factors such as race, age, and gender. Also, the level of education could be omitted, although this is somewhat represented by income. Outside of these micro factors, from a broader perspective, the economic situation during the voting season could have also influenced the GOP Vote Share.
