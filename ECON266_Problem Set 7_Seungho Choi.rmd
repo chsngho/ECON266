@@ -1,0 +1,274 @@
+---
+title: "ECON266_Problem Set 7_Seungho Choi"
+author: "Seungho Choi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(AER)
+library(plm)
+library(lmtest) 
+library(sandwich)
+
+data("Guns", package = "AER")
+panel_data <- pdata.frame(Guns, index = c("state", "year"))
+
+?Guns
+
+y_var <- "log(murder)" # Start with log(murder)
+key_var <- "law"
+controls <- "prisoners + density + income + population + afam + cauc + male" 
+formula_full <- paste(y_var, "~", key_var, "+", controls)
+```
+
+#
+
+#### (a) Please run the series of regressions below. In each, report the coefficient on law, the standard error on law, the t statistic, and the F test of all variables except the fixed effects.
+
+i. Pooled OLS (No Controls, No FE)
+```{r}
+formula1 <- paste(y_var, "~", key_var)
+m1 <- plm(as.formula(formula1), data = panel_data, model = "pooling")
+
+summary(m1, vcov = vcovHC(m1, type = "HC1", method = "white1"))
+```
+
+#
+
+ii. Pooled OLS with Controls (No FE)
+```{r}
+m2 <- plm(as.formula(formula_full), data = panel_data, model = "pooling")
+
+summary(m2, vcov = vcovHC(m2, type = "HC1", method = "white1"))
+```
+
+#
+
+iii. State Fixed Effects (Controls included)
+```{r}
+m3 <- plm(as.formula(formula_full), data = panel_data, model = "within", effect = "individual")
+
+summary(m3, vcov = vcovHC(m3, type = "HC1", method = "white1"))
+```
+
+#
+
+iv. Two-Way Fixed Effects (State and Year FE)
+```{r}
+m4 <- plm(as.formula(formula_full), data = panel_data, model = "within", effect = "twoways")
+m5 <- m4
+
+summary(m4, vcov = vcovHC(m4, type = "HC1", method = "white1"))
+```
+
+#
+
+v. Finally, run the same regression as in (iv), but report the cluster robust standard errors.
+```{r}
+m4 <- plm(as.formula(formula_full), data = panel_data, model = "within", effect = "twoways")
+m5 <- m4
+
+summary(m5, vcov = vcovHC(m5, type = "HC1", cluster = "group"))
+```
+
+#
+
+#### (b) For all of the regressions above:
+
+#
+
+#### Regression 1
+
+- $\hat{\beta}_1 = - 0.473372$, $Std. Error = 0.048536$
+
+##### i. Write out the underlying statistical model being estimated.
+- ${log}({murder}_{it}) = \beta_0 + \beta_1 {law}_{it} + U_{it}$
+
+##### ii. interpret the coefficient on law and comment on its economic significance (i.e., it is a “big” number, regardless of statistical significance).
+- $100 \times \hat{\beta}_1 = 100 \times (-0.473372) = -47.34\%$
+
+- On average, states with a shall-issue law ($law=1$) have a murder rate that is approximately $47.34\%$ lower than states without the law ($law=0$), across the pooled sample of states and years.
+
+- Since a reduction of $47.34\%$ in the murder rate is a huge decrease for a single policy to generate, the magnitude of the effect is highly economically significant.
+
+##### iii. Perform a 5% significance test of the variable law
+- $H_0: \beta_1 = 0$
+- $H_1: \beta_1 \neq 0$
+
+- $|t| = |-9.753| > 1.96$
+- Therefore, we reject the null hypotheses. The data provides strong evidence that the shall-issue law is associated with a change (specifically, a reduction) in the murder rate.
+
+#
+
+#### Regression 2
+
+- $\hat{\beta}_1 = - 0.31317$, $Std. Error = 0.035702$
+
+##### i. Write out the underlying statistical model being estimated.
+- ${log}({murder}_{it}) = \beta_0 + \beta_1 {law}_{it} + \mathbf{\gamma}'W_{it} + U_{it}$
+
+- $W_{it}$: vector of control variables
+
+##### ii. interpret the coefficient on law and comment on its economic significance
+- $100 \times \hat{\beta}_1 = 100 \times (-0.31317) = -31.32\%$
+
+- After controlling for the demographic (race, gender, population) and economic (income, prison population, density) factors, the estimation of the regression shows that states with a shall-issue law have a murder rate that is approximately $31.32\%$ lower than states without the law, on average, across the entire sample.
+
+- Even though the reduction in the murder rate is less compared to the first model, it is still showing an economically significant effect. The change from Regression 1 to Regression 2 suggests that the controls absorbed some of the initial effect, indicating that omitted variable bias from observable factors was present in Regression 1.
+
+##### iii. Perform a 5% significance test of the variable law
+- $H_0: \beta_1 = 0$
+- $H_1: \beta_1 \neq 0$
+
+- $|t| = |-8.7719| > 1.96$
+- Therefore, we reject the null hypotheses. The data provides strong evidence that, even after controlling for demographic and economic factors, the law is associated with a lower murder rate.
+
+#
+
+#### Regression 3
+
+- $\hat{\beta}_1 = - 0.06081$, $Std. Error = 0.026611$
+
+##### i. Write out the underlying statistical model being estimated.
+- ${log}({murder}_{it}) = \alpha_i + \beta_1 \text{law}_{it} + \mathbf{\gamma}'W_{it} + U_{it}$
+
+- $\alpha_i$: State Fixed Effect
+
+##### ii. interpret the coefficient on law and comment on its economic significance
+- $100 \times \hat{\beta}_1 = 100 \times (-0.06081) = -6.08\%$
+
+- After controlling for the time-invariant characteristics of each state ($\alpha_i$) and the time-varying control variables ($W_{it}$), the regression estimates that the adoption of a shall-issue law is associated with an approximate $6.08\%$ reduction in the state's murder rate.
+
+- After modifying the regression model, the economic significance of the effects has sharply decreased compared to the previous model. This means that the second regression model still had omitted variable bias. However, the reduction of $6.08\%$ is still considered economically significant since it is derived from a single policy change.
+
+##### iii. Perform a 5% significance test of the variable law
+- $H_0: \beta_1 = 0$
+- $H_1: \beta_1 \neq 0$
+
+- $|t| = |-2.2851| > 1.96$
+- Therefore, we reject the null hypotheses. The data shows that, even after controlling for time-invariant state characteristics, the law is associated with a reduction in the murder rate.
+
+#
+
+#### Regression 4
+
+- $\hat{\beta}_1 = - 0.014952$, $Std. Error = 0.026358$
+
+##### i. Write out the underlying statistical model being estimated.
+- ${log}({murder}_{it}) = \alpha_i + \delta_t + \beta_1 {law}_{it} + \mathbf{\gamma}'W_{it} + U_{it}$
+
+- $\delta_t$: Year Fixed Effect
+
+##### ii. interpret the coefficient on law and comment on its economic significance
+- $100 \times \hat{\beta}_1 = 100 \times (-0.014952) = -1.5\%$
+
+- After controlling for permanent differences between states (State FE), common changes over time across all states (Year FE), and the time-varying controls ($W_{it}$), the adoption of a shall-issue law is associated with an approximate $1.5\%$ reduction in a state's murder rate.
+
+- The new regression model is showing an additional decrease in the impact, which shows that the common national time trends were significantly impacting the perceived negative effects of the law that have been shown from the previous models. As the new model is showing a $1.5\%$ reduction. Since it is a small effect for a major policy change, this impact could be considered economically minor.
+
+##### iii. Perform a 5% significance test of the variable law
+- $H_0: \beta_1 = 0$
+- $H_1: \beta_1 \neq 0$
+
+- $|t| = |-0.5673| < 1.96$
+- Therefore, we fail to reject the null hypotheses. The data does not provide sufficient evidence to conclude that the shall-issue law has a non-zero effect on the murder rate, after controlling for both State and Year Fixed Effects.
+
+#
+
+#### Regression 5
+
+- $\hat{\beta}_1 = - 0.014952$, $Std. Error = 0.037504$
+
+##### i. Write out the underlying statistical model being estimated.
+- ${log}({murder}_{it}) = \alpha_i + \delta_t + \beta_1 {law}_{it} + \mathbf{\gamma}'W_{it} + U_{it}$
+- (identical to Regression 4)
+
+##### ii. interpret the coefficient on law and comment on its economic significance
+- $100 \times \hat{\beta}_1 = 100 \times (-0.014952) = -1.5\%$
+
+- After accounting for State Fixed Effects (permanent state traits) and Year Fixed Effects (common national trends), the adoption of a shall-issue law is associated with an estimated $1.5\%$ reduction in a state's murder rate.
+
+- The effect is considered economically minor. Although it is showing a negative effect, a $1.50\%$ change is very small for a major policy intervention and is unlikely to be the primary driver of crime rates.
+
+##### iii. Perform a 5% significance test of the variable law
+- $H_0: \beta_1 = 0$
+- $H_1: \beta_1 \neq 0$
+
+- $t = \frac{-0.014952}{0.037504} \approx -0.3987$
+- $|t| = |-0.3987| < 1.96$
+- Therefore, we fail to reject the null hypotheses. The data does not support the conclusion that the shall-issue law has a causal effect on the murder rate, after controlling for State and Year Fixed Effects and accounting for within-state error correlation.
+
+#
+
+#### (c) Think of at least one omitted variable that is solved by the inclusion of state fixed effects. For your answer to be valid three conditions will have to be met: (1) the variable must be correlated with the probability of passing “shall-carry laws”; (2) the variable must be correlated with the murder rate; (3) the variable must be state-specific, but time-invariant. In addition to explaining why it meets conditions (1)-(3), describe the direction of the bias that results from ignoring it.
+
+##### The example of the omitted variable (Z) that is solved by the inclusion of state fixed effects could be the "efficiency of state's criminal justice system". This variable meets the three conditions:
+
+(1) Correlated with law:
+- If the state has a generally high judicial efficiency and a strict criminal justice system, it'll be less likely to need to pass additional measures, such as the shell issue law, which is the one that we have been dealing with.
+- "Negative Correlation"
+
+(2) Correlated with log(murder):
+- Considering the costs of committing a crime when there is a stricter and more efficient public order system, it will be higher than the case where there is an inefficient and less strict system, which leads to a lower murder rate.
+- "Negative Effect"
+
+(3) State-specific, but time-invariant:
+- The structure of the court system and judicial culture is fixed within the states in terms of time. However, this varies across the states.
+- Solved by State Fixed Effect ($\alpha_i$)
+
+##### The direction of the bias that results from ignoring the "efficiency of state's criminal justice system" is positive.
+- ${Bias}(\hat{\beta}_{law}) = {corr}({law}, Z) \times {Effect}(Z \text{ on } {log}({murder}))$
+
+- ${Bias}(\hat{\beta}_{law}) = Negative \times Negative = Positive Bias$
+
+- Since the bias is positive, the OLS estimates are biased upwards; in other words, they are less negative. Based on this result, we can see that these models incorrectly assume that states that are less strict in their justice system are the ones that are adopting the law. Therefore, the true crime-reducing effect of the law is actually more negative than the biased estimate.
+
+#
+
+#### (d) Think of at least one omitted variable that is solved by the inclusion of time fixed effects. A similar set of three conditions to above will have to be met, properly modified for time fixed effects. Also, describe the direction of the bias that results from ignoring your variable.
+
+##### The example of the omitted variable (Z) that is solved by the inclusion of time fixed effects could be the "nationwide economic shock". This variable meets the three conditions:
+
+(1) Correlated with law:
+- During a national crisis, such as an economic recession, an immediate issue that the state is facing, the legislative process on other lawmaking could be delayed.
+- "Negative Correlation"
+
+(2) Correlated with log(murder):
+- The economic hardship during the recession could be associated with an increase in poverty and violent crime, which includes murder.
+- "Positive Effect"
+
+(3) Time-specific, but state-invariant:
+- The nationwide economic shock affects all states in a given year; however, the level of severity can vary by year across the given sample period.
+- Solved by Year Fixed Effect ($\delta_t$)
+
+##### The direction of the bias that results from ignoring the "nationwide economic shock" is negative.
+- ${Bias}(\hat{\beta}_{law}) = {corr}({law}, Z) \times {Effect}(Z \text{ on } {log}({murder}))$
+
+- ${Bias}(\hat{\beta}_{law}) = Negative \times Positive = Negative Bias$
+
+- Since the bias is negative, the OLS estimates are biased downwards; in other words, they are more negative. Based on this result, we can see that the models without Year FE mistakenly attribute the national crime decrease to the adoption of the law. Therefore, the true crime-reducing effect of the law is less negative than the biased estimate.
+
+#
+
+#### (e) Think of a variable that is not included in this regression and is also not solved by including state level or time fixed effects. In what direction will this variable bias the regression?
+
+##### "Changes in the drug market" could be the example of a variable this is not solved by fixed effects.
+
+- State-varying: Due to multiple reasons, such as laws and cultural variations across states, the shift in the drug market could vary significantly depending on the state.
+
+- Time-varying: The issue surrounding the drug can always change across time due to the introduction of new drugs as well as the shift in the transportation system.
+
+(1) Correlated with law:
+- When the state experiences drug-related violence, it will face definite pressure from the public to address the crime through legislative efforts, which will lead to a positive correlation.
+- "Positive Correlation"
+
+(2) Correlated with log(murder):
+- In a situation where the drug market is active and increasing, it can lead to a higher murder rate, as the drug crisis is often linked to crime.
+- "Positive Effect"
+
+##### The direction of the bias that results from ignoring the "efficiency of state's criminal justice system" is positive.
+- ${Bias}(\hat{\beta}_{law}) = {corr}({law}, Z) \times {Effect}(Z \text{ on } {log}({murder}))$
+
+- ${Bias}(\hat{\beta}_{law}) = Positive \times Positive = Positive Bias$
+
+- Since the bias is positive, the OLS estimates are biased upwards; in other words, they are less negative. This incorrectly concludes that the law has a minimal or positive effect on murder, when in reality, the law was a response to the high murder rate caused by the unaddressed drug crisis.
